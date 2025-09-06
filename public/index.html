@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>n8n Webhook Chat</title>
+  <title>n8n Webhook Chat (Light Theme)</title>
   <style>
+    /* Light theme — identical structure/JS to the original, only colors changed */
     :root { 
       --bg:#f7f8fb; 
       --panel:#ffffff; 
@@ -45,14 +46,14 @@
       <span class="tag" title="Requests are sent to this URL">Webhook target</span>
     </header>
 
-    <!-- Quick config (paste your Production webhook URL; never localhost for a hosted page) -->
+    <!-- Same behavior as original: paste your Production webhook URL; chat appears after you click Use -->
     <div class="cfg card">
       <label for="url" class="hint">Webhook URL</label>
       <input id="url" type="url" placeholder="https://your.domain.tld/webhook/chat" />
       <button id="save">Use</button>
     </div>
 
-    <div id="chatPanel" class="card">
+    <div id="chatPanel" class="card" style="display:none">
       <div id="chat"></div>
       <div class="inputbar">
         <textarea id="input" placeholder="Type a message…"></textarea>
@@ -64,10 +65,7 @@
   </div>
 
   <script>
-    // ————— Minimal client sending JSON { message } to your n8n webhook and rendering JSON/text reply
-    // Security note: do not paste secrets here. For private endpoints, protect your webhook upstream
-    // (e.g., Cloudflare Access, IP allowlist) and/or require a shared token header validated in n8n.
-
+    // ——— Minimal client sending JSON { message } to your n8n webhook and rendering JSON/text reply
     const els = {
       url: document.getElementById('url'),
       save: document.getElementById('save'),
@@ -77,30 +75,16 @@
       send: document.getElementById('send')
     };
 
-    // Persist URL in localStorage (client-side only)
     const KEY = 'n8n_webhook_url';
     const saved = localStorage.getItem(KEY) || '';
-    // Always show the chat; default to same-origin /api/chat unless an override is saved
-    els.panel.style.display = 'block';
     if (saved) {
       els.url.value = saved;
-      sys('Using override URL: ' + saved);
-    } else {
-      sys('Using same‑origin endpoint: /api/chat');
-    }`);
+      els.panel.style.display = 'block';
+      sys(`Ready. Using webhook: ${saved}`);
     }
 
     els.save.addEventListener('click', () => {
       const url = (els.url.value || '').trim();
-      if (!url) {
-        localStorage.removeItem(KEY);
-        sys('Cleared override. Using /api/chat');
-        return;
-      }
-      if (/^http:\/\//i.test(url)) alert('Prefer HTTPS in production.');
-      localStorage.setItem(KEY, url);
-      sys('Using override URL: ' + url);
-    });
       if (!url) return alert('Please paste your Production webhook URL.');
       if (/^http:\/\//i.test(url)) alert('Prefer HTTPS in production.');
       localStorage.setItem(KEY, url);
@@ -129,7 +113,7 @@
       const text = els.input.value.trim();
       if (!text) return;
       const url = localStorage.getItem(KEY);
-      const target = (url && url.trim()) ? url.trim() : '/api/chat';
+      if (!url) return alert('Configure your webhook URL first.');
 
       row('me', text);
       els.input.value='';
@@ -140,9 +124,8 @@
       thinking.add();
 
       try {
-        // If you add a shared secret, include it here and validate it in n8n
         const headers = { 'Content-Type': 'application/json' };
-        const res = await fetch(target, {
+        const res = await fetch(url, {
           method: 'POST',
           headers,
           body: JSON.stringify({ message: text })
@@ -170,14 +153,14 @@
     }
 
     /*
-    ————— If you cannot host this file on the same origin as your webhook, add CORS at your edge.
+    ——— If you cannot host this file on the same origin as your webhook, add CORS at your edge.
     Example Cloudflare Worker (routes /chat -> your webhook):
 
     export default { async fetch(req) {
       const { method } = req;
       if (method === 'OPTIONS') return new Response(null, { headers: cors() });
       const url = 'https://your.domain.tld/webhook/chat'; // n8n Production URL
-      const res = await fetch(target, { method, headers: req.headers, body: method==='GET'?undefined:req.body });
+      const res = await fetch(url, { method, headers: req.headers, body: method==='GET'?undefined:req.body });
       const out = new Response(res.body, res);
       out.headers.set('Access-Control-Allow-Origin','*');
       out.headers.set('Access-Control-Allow-Methods','GET,POST,OPTIONS');
