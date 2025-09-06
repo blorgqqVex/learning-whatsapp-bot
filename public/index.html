@@ -5,27 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>n8n Webhook Chat</title>
   <style>
-    :root { --bg:#0f1220; --panel:#151936; --ink:#e9ecff; --muted:#9aa3c7; --accent:#6ea8fe; }
+    :root { 
+      --bg:#f7f8fb; 
+      --panel:#ffffff; 
+      --ink:#0b1320; 
+      --muted:#5b667a; 
+      --accent:#0b5fff; 
+      --line:#e6eaf2; 
+      --bubbleMe:#e9f2ff; 
+      --bubbleBot:#f4f6fb; 
+    }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;background:radial-gradient(1200px 800px at 70% -10%,#1b2048 0%,#0f1220 45%,#0b0e1a 100%);color:var(--ink)}
+    body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;background:var(--bg);color:var(--ink)}
     .wrap{max-width:760px;margin:0 auto;padding:24px;display:flex;flex-direction:column;min-height:100%}
     header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-    .card{background:var(--panel);border:1px solid #232851;box-shadow:0 8px 30px rgba(0,0,0,.35);border-radius:20px}
+    .card{background:var(--panel);border:1px solid var(--line);box-shadow:0 8px 30px rgba(14,30,62,.06);border-radius:20px}
     #chat{flex:1;overflow:auto;padding:18px}
     .row{display:flex;gap:10px;margin:10px 0;align-items:flex-end}
     .msg{max-width:78%;padding:12px 14px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word}
     .me{justify-content:flex-end}
-    .me .msg{background:#29408a;color:#fff;border-bottom-right-radius:4px}
-    .bot .msg{background:#1d2246;color:var(--ink);border-bottom-left-radius:4px}
+    .me .msg{background:var(--bubbleMe);color:var(--ink);border-bottom-right-radius:4px}
+    .bot .msg{background:var(--bubbleBot);color:var(--ink);border-bottom-left-radius:4px}
     .sys{opacity:.85;font-size:13px;color:var(--muted);text-align:center}
-    .inputbar{display:flex;gap:10px;padding:12px;border-top:1px solid #232851}
-    textarea{flex:1;resize:vertical;min-height:44px;max-height:33vh;border-radius:12px;border:1px solid #2b3165;background:#0f1331;color:var(--ink);padding:10px 12px;outline:none}
-    button{border:0;border-radius:12px;padding:10px 16px;background:linear-gradient(135deg,#2e69ff,#8aa9ff);color:#fff;font-weight:600;cursor:pointer}
+    .inputbar{display:flex;gap:10px;padding:12px;border-top:1px solid var(--line)}
+    textarea{flex:1;resize:vertical;min-height:44px;max-height:33vh;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:10px 12px;outline:none}
+    button{border:0;border-radius:12px;padding:10px 16px;background:linear-gradient(135deg,#0b5fff,#69a1ff);color:#fff;font-weight:600;cursor:pointer}
     button:disabled{opacity:.6;cursor:not-allowed}
-    .cfg{margin-bottom:16px;padding:12px 14px;display:flex;gap:8px;align-items:center;border-radius:14px;background:#0c102b;border:1px dashed #2b3165}
-    .cfg input{flex:1;border-radius:10px;border:1px solid #2b3165;background:#0b0f28;color:#dbe1ff;padding:8px 10px;outline:none}
-    .tag{font:12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;background:#172045;border:1px solid #2b3165;padding:6px 8px;border-radius:10px;color:#b9c5ff}
+    .cfg{margin-bottom:16px;padding:12px 14px;display:flex;gap:8px;align-items:center;border-radius:14px;background:#f6f8fc;border:1px dashed var(--line)}
+    .cfg input{flex:1;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 10px;outline:none}
+    .tag{font:12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;background:#eef3ff;border:1px solid var(--line);padding:6px 8px;border-radius:10px;color:#2d3a66}
     .hint{font-size:13px;color:var(--muted)}
   </style>
 </head>
@@ -33,17 +42,17 @@
   <div class="wrap">
     <header>
       <h2 style="margin:0">n8n Webhook Chat</h2>
-      <span class="tag" title="Requests default to /api/chat on this same site">Same‑origin mode</span>
+      <span class="tag" title="Requests are sent to this URL">Webhook target</span>
     </header>
 
-    <!-- Optional: paste a full webhook URL to override the default /api/chat -->
+    <!-- Quick config (paste your Production webhook URL; never localhost for a hosted page) -->
     <div class="cfg card">
-      <label for="url" class="hint">Override target URL (optional)</label>
-      <input id="url" type="url" placeholder="Leave empty to use /api/chat" />
+      <label for="url" class="hint">Webhook URL</label>
+      <input id="url" type="url" placeholder="https://your.domain.tld/webhook/chat" />
       <button id="save">Use</button>
     </div>
 
-    <div id="chatPanel" class="card">
+    <div id="chatPanel" class="card" style="display:none">
       <div id="chat"></div>
       <div class="inputbar">
         <textarea id="input" placeholder="Type a message…"></textarea>
@@ -51,10 +60,14 @@
       </div>
     </div>
 
-    <p class="hint" style="margin-top:14px">Deploy with Cloudflare Pages. The built‑in Function at <code>/api/chat</code> securely proxies to your private n8n Production webhook (set via project env var).</p>
+    <p class="hint" style="margin-top:14px">Tip: Host this file on the same <em>origin</em> (scheme + domain + port) as your n8n webhook to avoid CORS. If you must use cross‑origin, add CORS headers at your reverse proxy or via a small worker (see comments in source).</p>
   </div>
 
   <script>
+    // ————— Minimal client sending JSON { message } to your n8n webhook and rendering JSON/text reply
+    // Security note: do not paste secrets here. For private endpoints, protect your webhook upstream
+    // (e.g., Cloudflare Access, IP allowlist) and/or require a shared token header validated in n8n.
+
     const els = {
       url: document.getElementById('url'),
       save: document.getElementById('save'),
@@ -64,21 +77,22 @@
       send: document.getElementById('send')
     };
 
-    const KEY = 'n8n_webhook_url_override';
+    // Persist URL in localStorage (client-side only)
+    const KEY = 'n8n_webhook_url';
     const saved = localStorage.getItem(KEY) || '';
-    if (saved) { els.url.value = saved; sys('Using override URL: ' + saved); }
-    else { sys('Using same‑origin endpoint: /api/chat'); }
+    if (saved) {
+      els.url.value = saved;
+      els.panel.style.display = 'block';
+      sys(`Ready. Using webhook: ${saved}`);
+    }
 
     els.save.addEventListener('click', () => {
       const url = (els.url.value || '').trim();
-      if (url) {
-        if (/^http:\/\//i.test(url)) alert('Prefer HTTPS in production.');
-        localStorage.setItem(KEY, url);
-        sys('Using override URL: ' + url);
-      } else {
-        localStorage.removeItem(KEY);
-        sys('Cleared override. Using /api/chat');
-      }
+      if (!url) return alert('Please paste your Production webhook URL.');
+      if (/^http:\/\//i.test(url)) alert('Prefer HTTPS in production.');
+      localStorage.setItem(KEY, url);
+      els.panel.style.display = 'block';
+      sys(`Ready. Using webhook: ${url}`);
     });
 
     els.send.addEventListener('click', sendMessage);
@@ -101,8 +115,8 @@
     async function sendMessage(){
       const text = els.input.value.trim();
       if (!text) return;
-      const override = localStorage.getItem(KEY);
-      const target = override || '/api/chat';
+      const url = localStorage.getItem(KEY);
+      if (!url) return alert('Configure your webhook URL first.');
 
       row('me', text);
       els.input.value='';
@@ -113,8 +127,9 @@
       thinking.add();
 
       try {
+        // If you add a shared secret, include it here and validate it in n8n
         const headers = { 'Content-Type': 'application/json' };
-        const res = await fetch(target, {
+        const res = await fetch(url, {
           method: 'POST',
           headers,
           body: JSON.stringify({ message: text })
@@ -140,6 +155,24 @@
       if (typeof p === 'string') return p;
       try { return JSON.stringify(p, null, 2); } catch { return String(p); }
     }
+
+    /*
+    ————— If you cannot host this file on the same origin as your webhook, add CORS at your edge.
+    Example Cloudflare Worker (routes /chat -> your webhook):
+
+    export default { async fetch(req) {
+      const { method } = req;
+      if (method === 'OPTIONS') return new Response(null, { headers: cors() });
+      const url = 'https://your.domain.tld/webhook/chat'; // n8n Production URL
+      const res = await fetch(url, { method, headers: req.headers, body: method==='GET'?undefined:req.body });
+      const out = new Response(res.body, res);
+      out.headers.set('Access-Control-Allow-Origin','*');
+      out.headers.set('Access-Control-Allow-Methods','GET,POST,OPTIONS');
+      out.headers.set('Access-Control-Allow-Headers','Content-Type');
+      return out;
+    }}
+    function cors(){ return { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type' }; }
+    */
   </script>
 </body>
 </html>
