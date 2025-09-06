@@ -52,7 +52,7 @@
       <button id="save">Use</button>
     </div>
 
-    <div id="chatPanel" class="card" style="display:none">
+    <div id="chatPanel" class="card">
       <div id="chat"></div>
       <div class="inputbar">
         <textarea id="input" placeholder="Type a message…"></textarea>
@@ -80,14 +80,27 @@
     // Persist URL in localStorage (client-side only)
     const KEY = 'n8n_webhook_url';
     const saved = localStorage.getItem(KEY) || '';
+    // Always show the chat; default to same-origin /api/chat unless an override is saved
+    els.panel.style.display = 'block';
     if (saved) {
       els.url.value = saved;
-      els.panel.style.display = 'block';
-      sys(`Ready. Using webhook: ${saved}`);
+      sys('Using override URL: ' + saved);
+    } else {
+      sys('Using same‑origin endpoint: /api/chat');
+    }`);
     }
 
     els.save.addEventListener('click', () => {
       const url = (els.url.value || '').trim();
+      if (!url) {
+        localStorage.removeItem(KEY);
+        sys('Cleared override. Using /api/chat');
+        return;
+      }
+      if (/^http:\/\//i.test(url)) alert('Prefer HTTPS in production.');
+      localStorage.setItem(KEY, url);
+      sys('Using override URL: ' + url);
+    });
       if (!url) return alert('Please paste your Production webhook URL.');
       if (/^http:\/\//i.test(url)) alert('Prefer HTTPS in production.');
       localStorage.setItem(KEY, url);
@@ -116,7 +129,7 @@
       const text = els.input.value.trim();
       if (!text) return;
       const url = localStorage.getItem(KEY);
-      if (!url) return alert('Configure your webhook URL first.');
+      const target = (url && url.trim()) ? url.trim() : '/api/chat';
 
       row('me', text);
       els.input.value='';
@@ -129,7 +142,7 @@
       try {
         // If you add a shared secret, include it here and validate it in n8n
         const headers = { 'Content-Type': 'application/json' };
-        const res = await fetch(url, {
+        const res = await fetch(target, {
           method: 'POST',
           headers,
           body: JSON.stringify({ message: text })
@@ -164,7 +177,7 @@
       const { method } = req;
       if (method === 'OPTIONS') return new Response(null, { headers: cors() });
       const url = 'https://your.domain.tld/webhook/chat'; // n8n Production URL
-      const res = await fetch(url, { method, headers: req.headers, body: method==='GET'?undefined:req.body });
+      const res = await fetch(target, { method, headers: req.headers, body: method==='GET'?undefined:req.body });
       const out = new Response(res.body, res);
       out.headers.set('Access-Control-Allow-Origin','*');
       out.headers.set('Access-Control-Allow-Methods','GET,POST,OPTIONS');
